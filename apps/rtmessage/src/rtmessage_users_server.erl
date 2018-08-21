@@ -42,7 +42,7 @@ handle_call({register, [{User, UserId}]}, _From, State) ->
 	case lists:member({User, UserId}, UsersList) of
 		true -> {reply, duplicate_user, State};
 		false ->
-			start_user_process({User, UserId}),
+			start_user_process({User, UserId}, node()),
 			Reply = {ok, [{User, UserId}, State#state.server_id]},
 			{reply, Reply, State#state{users = [{User, UserId} | UsersList]}}
 	end.
@@ -66,10 +66,10 @@ start_user_sup() ->
 	supervisor:start_link({local, rtmsg_users_sup}, rtmessage_user_service_sup, []).
 
 %% Start user process for each user
--spec start_user_process(tuple()) -> {ok, list()}.
-start_user_process(User) ->
+-spec start_user_process(tuple(), node()) -> {ok, list()}.
+start_user_process(User, LandNode) ->
 	{UserName, UserId} = User,
 	ChildSpec = {UserId,
-				 {rtmessage_user_service, start_link, [UserName, UserId]},
+				 {rtmessage_user_service, start_link, [UserName, UserId, LandNode]},
 				 permanent, 500, worker, [rtmessage_user_service]},
 	supervisor:start_child(rtmsg_users_sup, ChildSpec).
